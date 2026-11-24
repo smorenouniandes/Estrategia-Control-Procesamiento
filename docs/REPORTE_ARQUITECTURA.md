@@ -1,7 +1,7 @@
 # Reporte de Arquitectura — Procesamiento inicial y Golden Set
 
 Proyecto: **Asignación de Talento 2027**
-Componente: `procesamiento_inicial/` (etapa previa al modelo de optimización)
+Componente: `procesamiento/` (etapa previa al modelo de optimización)
 
 Este reporte presenta dos vistas de la misma solución: una **funcional** (qué hace
 cada etapa, en lenguaje de negocio) y una **técnica** (módulos, I/O y artefactos).
@@ -45,7 +45,7 @@ consumidores los cargan.
 
 **Lectura del diagrama:**
 - **Entradas** — tres `.xlsx` en la raíz del workspace. Solo `carga.py` los lee.
-- **Paquete `procesamiento_inicial/`** (pandas):
+- **Paquete `procesamiento/`** (pandas):
   - `config.py` — flags, catálogo de roles, mapeos.
   - `carga.py` — `cargar_staff`, `cargar_skills`, `construir_pool`, `cargar_slots`.
   - `prefiltrado.py` — `es_elegible()`, `score()`, `construir_candidatos()`.
@@ -82,7 +82,7 @@ está en `DOCUMENTACION_E2E.md`, §8.1.
 ## 4. Regenerar las imágenes
 
 ```bash
-python procesamiento_inicial/docs/generar_diagramas.py
+python docs/generar_diagramas.py
 ```
 
 Reescribe `docs/arquitectura_funcional.png` y `docs/arquitectura_tecnica.png`. El

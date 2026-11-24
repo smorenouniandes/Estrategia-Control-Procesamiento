@@ -11,18 +11,18 @@ import sys
 from datetime import datetime, timezone
 import pandas as pd
 
-# permite 'python run.py' (directo) y 'python -m procesamiento_inicial.run'
+# permite 'python run.py' (directo) y 'python -m procesamiento.run'
 if __package__ in (None, ""):
     from pathlib import Path
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from procesamiento_inicial import config as C
-from procesamiento_inicial.carga import (Reporte, cargar_skills, cargar_staff,
-                                         construir_pool, cargar_slots)
-from procesamiento_inicial.prefiltrado import construir_candidatos
-from procesamiento_inicial.validacion import (matriz_elegibilidad,
-                                              reporte_cobertura, resumen_cobertura)
-from procesamiento_inicial.golden import escribir_golden_set
+from procesamiento import config as C
+from procesamiento.carga import (Reporte, cargar_skills, cargar_staff,
+                                  construir_pool, cargar_slots)
+from procesamiento.prefiltrado import construir_candidatos
+from procesamiento.validacion import (matriz_elegibilidad,
+                                      reporte_cobertura, resumen_cobertura)
+from procesamiento.golden import escribir_golden_set
 
 
 def linea(c="="):

@@ -131,7 +131,7 @@ def diagrama_tecnico():
         _box(ax, 0.05 + i * 0.31, 0.845, 0.27, 0.095, txt, C_SRC, C_SRC_E, 9)
 
     # --- módulos python ---
-    _band(ax, 0.02, 0.40, 0.62, 0.38, "Paquete procesamiento_inicial/ (pandas)", C_PROC_E)
+    _band(ax, 0.02, 0.40, 0.62, 0.38, "Paquete procesamiento/ (pandas)", C_PROC_E)
     mods = [
         (0.05, 0.66, "config.py\nflags · catálogo de roles · mapeos"),
         (0.05, 0.555, "carga.py\ncargar_staff · cargar_skills\nconstruir_pool · cargar_slots"),

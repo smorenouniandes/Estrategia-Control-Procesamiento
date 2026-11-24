@@ -1,10 +1,13 @@
-# procesamiento_inicial — Golden Set compartido
+# Paquete `procesamiento/` — detalle del golden set
+
+> El README principal del repo está en la raíz (`../README.md`). Este documento
+> amplía el detalle del paquete y del golden set.
 
 Pipeline único de **carga → normalización → prefiltrado → validación** que
 produce el **golden set**: el conjunto de datos estandarizado que consumen por
 igual el modelo CP-SAT (`Estrategia&Control`) y el modelo MILP (`Optimizacion`).
 
-Implementa el proceso descrito en `../PROCESO_ESTANDAR_PREMODELO.md`.
+Implementa el proceso descrito en `PROCESO_ESTANDAR_PREMODELO.md`.
 
 ## Datos y golden set (importante al clonar)
 
@@ -24,14 +27,14 @@ seguro aparte (no por git).
 ```bash
 git clone <URL_DEL_REPO>
 cd Estrategia-Control-Procesamiento      # raíz donde está el paquete
-pip install -r procesamiento_inicial/requirements.txt
+pip install -r requirements.txt
 
 # Deja los tres Excel en la carpeta Data/ (ya existe en el repo):
 #   Data/DATA1_personas.xlsx · Data/DATA2_demanda.xlsx · Data/DATA3_staffq4.xlsx
 # El pipeline los busca por patrón de nombre (DATA1*, DATA2*, DATA3*), así que
 # toleran sufijos de versión.
 
-python -m procesamiento_inicial.run      # crea procesamiento_inicial/golden_set/
+python -m procesamiento.run      # crea golden_set/
 ```
 
 El pipeline es reproducible: mismos Excel + mismos flags de `config.py` ⇒ mismo
@@ -41,14 +44,14 @@ golden set. Por eso basta versionar el código.
 
 ```bash
 pip install -r requirements.txt
-python -m procesamiento_inicial.run          # desde la raíz del workspace
+python -m procesamiento.run          # desde la raíz del workspace
 # o
-cd procesamiento_inicial && python run.py
+cd procesamiento && python run.py
 ```
 
 Lee los Excel de la carpeta `Data/` (`Data/DATA1_personas.xlsx`,
 `Data/DATA2_demanda.xlsx`, `Data/DATA3_staffq4.xlsx`) y escribe el golden set en
-`procesamiento_inicial/golden_set/`.
+`golden_set/`.
 
 ## Qué produce (golden set)
 
@@ -76,9 +79,9 @@ golden_set/
 ## Cómo lo consume cada modelo
 
 ```python
-from procesamiento_inicial.golden import cargar_golden_set
+from procesamiento.golden import cargar_golden_set
 
-gs = cargar_golden_set("procesamiento_inicial/golden_set")
+gs = cargar_golden_set("golden_set")
 gs.personas      # DataFrame  (modelo/personas.csv)
 gs.slots         # DataFrame  (modelo/slots.csv)
 gs.candidatos    # DataFrame  (modelo/candidatos.csv) — insumo principal

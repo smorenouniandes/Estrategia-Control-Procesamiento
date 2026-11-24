@@ -1,7 +1,7 @@
 # Documentación técnica E2E — Procesamiento inicial y Golden Set
 
 **Proyecto:** Asignación de Talento 2027
-**Componente:** `procesamiento_inicial/` — pipeline previo al modelo de optimización
+**Componente:** `procesamiento/` — pipeline previo al modelo de optimización
 **Salida:** *golden set*, dataset estandarizado que consumen por igual el modelo
 CP-SAT (`Estrategia&Control`) y el modelo MILP (`Optimizacion`).
 **Alcance:** desde los tres Excel de origen hasta el golden set. El motor de
@@ -349,9 +349,9 @@ requiere_interno, n_candidatos, cubrible, causa_sin_candidato`.
 ## 8. Cómo lo consume cada modelo
 
 ```python
-from procesamiento_inicial.golden import cargar_golden_set
+from procesamiento.golden import cargar_golden_set
 
-gs = cargar_golden_set("procesamiento_inicial/golden_set")
+gs = cargar_golden_set("golden_set")
 gs.personas     # DataFrame (modelo/personas.csv)
 gs.slots        # DataFrame (modelo/slots.csv)
 gs.candidatos   # DataFrame (modelo/candidatos.csv) — insumo principal
@@ -413,11 +413,11 @@ elimina del código; solo se conmuta su valor.
 ## 10. Ejecución y reproducibilidad
 
 ```bash
-pip install -r procesamiento_inicial/requirements.txt   # pandas, openpyxl, pyarrow
-python -m procesamiento_inicial.run                     # desde la raíz del workspace
+pip install -r requirements.txt   # pandas, openpyxl, pyarrow
+python -m procesamiento.run                     # desde la raíz del workspace
 ```
 
-- Lee los tres Excel de la raíz y escribe `procesamiento_inicial/golden_set/`.
+- Lee los tres Excel de la raíz y escribe `golden_set/`.
 - El `resumen.json` sella entrada (conteos) y configuración (parámetros), de modo
   que un golden set es reproducible: mismos Excel + mismos flags ⇒ mismo resultado.
 - La ejecución imprime las tres capas y los conteos, y deja la traza completa en

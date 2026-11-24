@@ -15,8 +15,8 @@ from pathlib import Path
 # coincidan, se toma el más reciente. Si no hay ninguno, el pipeline avisa con
 # un mensaje claro indicando dónde dejar el archivo.
 ROOT = Path(__file__).resolve().parent.parent      # raíz del repo
-DATA_DIR = ROOT / "Data"
-OUT_DIR = Path(__file__).resolve().parent / "golden_set"
+DATA_DIR = ROOT / "Data"                            # insumos
+OUT_DIR = ROOT / "golden_set"                       # salida en la raíz del repo
 
 
 def _buscar_insumo(patron: str, etiqueta: str) -> Path:
