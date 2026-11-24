@@ -9,11 +9,44 @@ from __future__ import annotations
 from pathlib import Path
 
 # --- rutas ---------------------------------------------------------------
-ROOT = Path(__file__).resolve().parent.parent      # raíz del workspace (PoCs/)
-DATA1_PATH = ROOT / "DATA1_personas.xlsx"           # skills (lookup por Código)
-DATA2_PATH = ROOT / "DATA2_demanda.xlsx"            # demanda (slots)
-DATA3_PATH = ROOT / "DATA3_staffq4.xlsx"            # staff Q4 = POOL
+# Los insumos van en la carpeta Data/ en la raíz del repo. Se buscan por patrón
+# de nombre (insensible a mayúsculas) para tolerar variaciones como
+# 'DATA1_personas.xlsx', 'DATA1.xlsx', 'data1_v2.xlsx'... Si hay varios que
+# coincidan, se toma el más reciente. Si no hay ninguno, el pipeline avisa con
+# un mensaje claro indicando dónde dejar el archivo.
+ROOT = Path(__file__).resolve().parent.parent      # raíz del repo
+DATA_DIR = ROOT / "Data"
 OUT_DIR = Path(__file__).resolve().parent / "golden_set"
+
+
+def _buscar_insumo(patron: str, etiqueta: str) -> Path:
+    """Devuelve el Excel que empieza por `patron` en Data/ (el más reciente)."""
+    if not DATA_DIR.exists():
+        raise FileNotFoundError(
+            f"No existe la carpeta de insumos: {DATA_DIR}\n"
+            f"Crea la carpeta 'Data/' en la raíz del repo y deja ahí los 3 Excel.")
+    candidatos = sorted(
+        [p for p in DATA_DIR.glob("*.xls*")
+         if p.name.lower().startswith(patron.lower())],
+        key=lambda p: p.stat().st_mtime, reverse=True)
+    if not candidatos:
+        raise FileNotFoundError(
+            f"No encuentro el insumo de {etiqueta} en {DATA_DIR}\n"
+            f"Esperaba un .xlsx cuyo nombre empiece por '{patron}' "
+            f"(p.ej. '{patron}_....xlsx').")
+    return candidatos[0]
+
+
+def rutas_insumos() -> tuple[Path, Path, Path]:
+    """(DATA1 personas, DATA2 demanda, DATA3 staff). Resuelve en tiempo de uso."""
+    return (_buscar_insumo("DATA1", "personas (skills)"),
+            _buscar_insumo("DATA2", "demanda"),
+            _buscar_insumo("DATA3", "staff Q4"))
+
+
+# Rutas concretas, resueltas al importar. Si falta un insumo, el error claro de
+# _buscar_insumo se lanza aquí, antes de empezar a procesar.
+DATA1_PATH, DATA2_PATH, DATA3_PATH = rutas_insumos()
 
 # =========================================================================
 # PARÁMETROS [A CONFIRMAR] — línea base propuesta. Ver §7 del proceso.

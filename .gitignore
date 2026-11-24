@@ -1,5 +1,10 @@
 # --- Datos sensibles (NO subir) ---------------------------------------
-# Excel de origen con datos reales de personas / staff del banco.
+# Insumos reales en Data/ (personas, demanda, staff). Se ignora todo el
+# contenido de la carpeta pero se conserva la carpeta (vía .gitkeep) para que
+# quien clone sepa dónde dejar los Excel.
+Data/*
+!Data/.gitkeep
+# Por si algún Excel se deja fuera de Data/ por error:
 *.xlsx
 *.xls
 # Golden set generado: contiene códigos y nombres reales. Es reproducible

@@ -1,0 +1,10 @@
+# Carpeta de insumos del procesamiento.
+#
+# Deja aquí los tres Excel (NO se suben a git; contienen datos reales):
+#   - DATA1_personas.xlsx   (personas + matriz de skills)
+#   - DATA2_demanda.xlsx    (demanda / plazas)
+#   - DATA3_staffq4.xlsx    (staff Q4 = pool disponible)
+#
+# El pipeline los busca por patrón de nombre (DATA1*, DATA2*, DATA3*), así que
+# toleran sufijos de versión. Luego ejecuta desde la raíz del repo:
+#   python -m procesamiento_inicial.run

@@ -11,8 +11,8 @@ Implementa el proceso descrito en `../PROCESO_ESTANDAR_PREMODELO.md`.
 Este repositorio contiene **solo código y documentación**. Por tratarse de datos
 reales de personas del banco, **no se versionan**:
 
-- los Excel de origen (`DATA1_personas.xlsx`, `DATA2_demanda.xlsx`,
-  `DATA3_staffq4.xlsx`), y
+- los Excel de origen, que van en `Data/` (`Data/DATA1_personas.xlsx`,
+  `Data/DATA2_demanda.xlsx`, `Data/DATA3_staffq4.xlsx`), y
 - el `golden_set/` generado (contiene códigos y nombres reales).
 
 Ambos están excluidos en `.gitignore`. Quien clone el repo **no encontrará** el
@@ -26,8 +26,10 @@ git clone <URL_DEL_REPO>
 cd Estrategia-Control-Procesamiento      # raíz donde está el paquete
 pip install -r procesamiento_inicial/requirements.txt
 
-# Coloca los tres Excel en la raíz del workspace (junto a procesamiento_inicial/):
-#   DATA1_personas.xlsx · DATA2_demanda.xlsx · DATA3_staffq4.xlsx
+# Deja los tres Excel en la carpeta Data/ (ya existe en el repo):
+#   Data/DATA1_personas.xlsx · Data/DATA2_demanda.xlsx · Data/DATA3_staffq4.xlsx
+# El pipeline los busca por patrón de nombre (DATA1*, DATA2*, DATA3*), así que
+# toleran sufijos de versión.
 
 python -m procesamiento_inicial.run      # crea procesamiento_inicial/golden_set/
 ```
@@ -44,8 +46,8 @@ python -m procesamiento_inicial.run          # desde la raíz del workspace
 cd procesamiento_inicial && python run.py
 ```
 
-Lee los Excel de la raíz del workspace (`DATA1_personas.xlsx`,
-`DATA2_demanda.xlsx`, `DATA3_staffq4.xlsx`) y escribe el golden set en
+Lee los Excel de la carpeta `Data/` (`Data/DATA1_personas.xlsx`,
+`Data/DATA2_demanda.xlsx`, `Data/DATA3_staffq4.xlsx`) y escribe el golden set en
 `procesamiento_inicial/golden_set/`.
 
 ## Qué produce (golden set)
