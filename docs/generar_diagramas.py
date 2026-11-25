@@ -123,73 +123,88 @@ def diagrama_tecnico():
     ax.set_title("Arquitectura técnica — módulos, I/O y artefactos",
                  fontsize=14, fontweight="bold", pad=14)
 
-    # --- entradas (.xlsx) ---
-    _band(ax, 0.02, 0.82, 0.96, 0.15, "Entradas (.xlsx en Data/)", C_SRC_E)
-    for i, (txt) in enumerate(["DATA1_personas.xlsx\nHoja 1 · 160 cols",
-                               "DATA2_demanda.xlsx\nHoja 1",
-                               "DATA3_staffq4.xlsx\n3 hojas"]):
-        _box(ax, 0.05 + i * 0.31, 0.845, 0.27, 0.095, txt, C_SRC, C_SRC_E, 9)
+    # Layout en 4 franjas verticales con un flujo descendente claro:
+    #   Entradas  →  Pipeline (carga→prefiltrado→validación→golden)  →
+    #   golden_set  →  Consumidores.  Las flechas no cruzan cajas.
 
-    # --- módulos python ---
-    _band(ax, 0.02, 0.40, 0.62, 0.38, "Paquete procesamiento/ (pandas)", C_PROC_E)
-    mods = [
-        (0.05, 0.66, "config.py\nflags · catálogo de roles · mapeos"),
-        (0.05, 0.555, "carga.py\ncargar_staff · cargar_skills\nconstruir_pool · cargar_slots"),
-        (0.05, 0.45, "prefiltrado.py\nes_elegible() · score()\nconstruir_candidatos()"),
-        (0.345, 0.555, "tiempo.py\nparse_trimestre · parse_fecha"),
-        (0.345, 0.45, "validacion.py\nmatriz_elegibilidad\nreporte_cobertura"),
-        (0.345, 0.66, "run.py\norquestador 3 capas"),
-    ]
-    for x, y, t in mods:
-        _box(ax, x, y, 0.27, 0.088, t, C_PROC, C_PROC_E, 8.3)
-    _box(ax, 0.05, 0.415, 0.565, 0.025,
-         "golden.py · escribir_golden_set() / cargar_golden_set()", C_PROC, C_PROC_E, 8.3, bold=True)
+    # --- franja 1: entradas (.xlsx) ---
+    _band(ax, 0.02, 0.85, 0.96, 0.12, "1 · Entradas (.xlsx en Data/)", C_SRC_E)
+    entradas_x = [0.06, 0.37, 0.68]
+    for x, txt in zip(entradas_x, ["DATA1_personas.xlsx\nHoja 1 · 160 cols",
+                                   "DATA2_demanda.xlsx\nHoja 1",
+                                   "DATA3_staffq4.xlsx\n3 hojas"]):
+        _box(ax, x, 0.865, 0.26, 0.075, txt, C_SRC, C_SRC_E, 8.6)
 
-    # --- artefactos golden_set (CSV, en modelo/ y reportes/) ---
-    _band(ax, 0.66, 0.335, 0.32, 0.445, "golden_set/ (solo CSV)", C_GOLD_E)
-    # sub-bloque modelo/
-    ax.text(0.675, 0.742, "modelo/  — entrada de los modelos",
-            ha="left", va="center", fontsize=8.0, color=C_GOLD_E, fontweight="bold")
-    y = 0.715
+    # --- franja 2: pipeline (columna izquierda, flujo vertical lineal) ---
+    _band(ax, 0.02, 0.30, 0.52, 0.49, "2 · Paquete procesamiento/ (pandas)", C_PROC_E)
+    # run.py orquesta (a la derecha, apunta a cada capa)
+    _box(ax, 0.40, 0.56, 0.12, 0.17,
+         "run.py\n\norquesta\nlas 3\ncapas", C_PROC, C_PROC_E, 8.0, bold=True)
+    # las 3 capas en cascada vertical
+    _box(ax, 0.05, 0.665, 0.31, 0.075,
+         "carga.py  (Capa 1)\nnormaliza · pool = staff + skills · slots", C_PROC, C_PROC_E, 8.0)
+    _box(ax, 0.05, 0.555, 0.31, 0.075,
+         "prefiltrado.py  (Capa 2)\nes_elegible() + score()", C_PROC, C_PROC_E, 8.0)
+    _box(ax, 0.05, 0.445, 0.31, 0.075,
+         "validacion.py  (Capa 3)\nmatriz elegibilidad + cobertura", C_PROC, C_PROC_E, 8.0)
+    # soporte (config, tiempo) a la derecha abajo
+    _box(ax, 0.40, 0.445, 0.12, 0.085,
+         "config.py\ntiempo.py\n(soporte)", C_PROC, C_PROC_E, 7.6)
+    # golden.py cierra el paquete (escribe el golden set)
+    _box(ax, 0.05, 0.315, 0.47, 0.055,
+         "golden.py · escribir_golden_set()", C_PROC, C_PROC_E, 8.2, bold=True)
+
+    # --- franja 3: golden_set (columna derecha) ---
+    _band(ax, 0.58, 0.30, 0.40, 0.49, "3 · golden_set/ (solo CSV)", C_GOLD_E)
+    ax.text(0.60, 0.752, "modelo/  — entrada de los modelos",
+            ha="left", va="center", fontsize=8.2, color=C_GOLD_E, fontweight="bold")
+    y = 0.725
     for a in ["personas.csv", "slots.csv", "candidatos.csv  (principal)"]:
-        _box(ax, 0.675, y - 0.030, 0.29, 0.030, a, C_GOLD, C_GOLD_E, 7.9)
-        y -= 0.036
-    # sub-bloque reportes/
-    ax.text(0.675, y - 0.016, "reportes/  — auditoría (no entra al modelo)",
-            ha="left", va="center", fontsize=8.0, color=C_GOLD_E, fontweight="bold")
-    y -= 0.032
+        _box(ax, 0.60, y - 0.032, 0.36, 0.032, a, C_GOLD, C_GOLD_E, 8.0)
+        y -= 0.04
+    ax.text(0.60, y - 0.012, "reportes/  — auditoría (no entra al modelo)",
+            ha="left", va="center", fontsize=8.2, color=C_GOLD_E, fontweight="bold")
+    y -= 0.03
     for a in ["cobertura.csv", "resumen.json",
               "revision_personas.csv", "reporte_normalizacion.txt"]:
-        _box(ax, 0.675, y - 0.030, 0.29, 0.030, a, "#FDF8E8", C_GOLD_E, 7.9)
-        y -= 0.036
+        _box(ax, 0.60, y - 0.032, 0.36, 0.032, a, "#FDF8E8", C_GOLD_E, 8.0)
+        y -= 0.04
 
-    # --- consumidores ---
-    _band(ax, 0.02, 0.03, 0.96, 0.33, "Consumidores (modelos — fuera del alcance)", C_MODEL_E)
-    _box(ax, 0.08, 0.14, 0.38, 0.14,
-         "CP-SAT (OR-Tools)\n\nvariables x[p,s] sobre candidatos\n+ restricciones de composición\n+ objetivo con score",
-         C_MODEL, C_MODEL_E, 8.6, bold=True)
-    _box(ax, 0.54, 0.14, 0.38, 0.14,
-         "MILP (SciPy/HiGHS)\n\nvariables x[p,s] sobre candidatos\n+ restricciones de composición\n+ objetivo con score",
-         C_MODEL, C_MODEL_E, 8.6, bold=True)
-    _box(ax, 0.30, 0.055, 0.40, 0.045,
-         "cargar_golden_set()  →  gs.personas / gs.slots / gs.candidatos",
-         C_GOLD, C_GOLD_E, 8.3, bold=True)
+    # --- franja 4: consumidores ---
+    _band(ax, 0.02, 0.03, 0.96, 0.22, "4 · Consumidores (modelos — fuera del alcance)", C_MODEL_E)
+    _box(ax, 0.30, 0.185, 0.40, 0.045,
+         "cargar_golden_set()  →  gs.candidatos / gs.slots / gs.personas",
+         C_GOLD, C_GOLD_E, 8.2, bold=True)
+    _box(ax, 0.07, 0.065, 0.40, 0.10,
+         "CP-SAT (OR-Tools)\nvariables x[p,s] sobre candidatos\n+ restricciones de composición · objetivo con score",
+         C_MODEL, C_MODEL_E, 8.2, bold=True)
+    _box(ax, 0.53, 0.065, 0.40, 0.10,
+         "MILP (SciPy/HiGHS)\nvariables x[p,s] sobre candidatos\n+ restricciones de composición · objetivo con score",
+         C_MODEL, C_MODEL_E, 8.2, bold=True)
 
-    # flechas
-    for i in range(3):
-        _arrow(ax, (0.185 + i * 0.31, 0.845), (0.30, 0.655))
-    _arrow(ax, (0.33, 0.66), (0.33, 0.645))
-    _arrow(ax, (0.33, 0.555), (0.33, 0.54))
-    _arrow(ax, (0.19, 0.45), (0.19, 0.442))
-    _arrow(ax, (0.62, 0.427), (0.675, 0.50), ec=C_GOLD_E, lw=2.2)
-    _arrow(ax, (0.80, 0.335), (0.52, 0.105), ec=C_MODEL_E, lw=2.0)
-    _arrow(ax, (0.50, 0.055), (0.27, 0.21), ec=C_MODEL_E, lw=1.6)
-    _arrow(ax, (0.50, 0.055), (0.73, 0.21), ec=C_MODEL_E, lw=1.6)
+    # ===================== FLECHAS (flujo sin cruces) =====================
+    # 1) cada entrada baja recta a la Capa 1 (carga.py)
+    for x in [0.19, 0.50, 0.81]:
+        _arrow(ax, (x, 0.865), (x if x < 0.36 else 0.205, 0.742), ec=C_SRC_E, lw=1.6)
+    # 2) cascada vertical entre capas (izquierda)
+    _arrow(ax, (0.205, 0.665), (0.205, 0.632))      # carga -> prefiltrado
+    _arrow(ax, (0.205, 0.555), (0.205, 0.522))      # prefiltrado -> validación
+    _arrow(ax, (0.205, 0.445), (0.205, 0.372))      # validación -> golden.py
+    # 3) run.py orquesta (líneas finas a cada capa)
+    for yv in (0.702, 0.592, 0.482):
+        _arrow(ax, (0.40, 0.60), (0.363, yv), ec="#9BB9A6", lw=1.0, style="-|>")
+    # 4) golden.py escribe el golden_set (cruza a la franja 3, sin tocar cajas)
+    _arrow(ax, (0.52, 0.343), (0.58, 0.40), ec=C_GOLD_E, lw=2.4)
+    # 5) golden_set se carga en los consumidores (baja recto)
+    _arrow(ax, (0.70, 0.30), (0.55, 0.232), ec=C_MODEL_E, lw=2.0)
+    # 6) cargar_golden_set alimenta a cada modelo
+    _arrow(ax, (0.42, 0.185), (0.27, 0.167), ec=C_MODEL_E, lw=1.6)
+    _arrow(ax, (0.58, 0.185), (0.73, 0.167), ec=C_MODEL_E, lw=1.6)
 
     ax.text(0.5, 0.004,
-            "Golden set solo en CSV, separado en modelo/ (entrada) y reportes/ (auditoría). "
+            "Flujo: Entradas → carga → prefiltrado → validación → golden.py → golden_set → modelos. "
             "Los modelos NO leen los .xlsx ni re-aplican reglas.",
-            ha="center", va="bottom", fontsize=8.5, style="italic", color="#444")
+            ha="center", va="bottom", fontsize=8.3, style="italic", color="#444")
 
     out = DOCS / "arquitectura_tecnica.png"
     fig.savefig(out, dpi=150, bbox_inches="tight"); plt.close(fig)
