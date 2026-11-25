@@ -18,7 +18,8 @@ if __package__ in (None, ""):
 
 from procesamiento import config as C
 from procesamiento.carga import (Reporte, cargar_skills, cargar_staff,
-                                  construir_pool, cargar_slots)
+                                  construir_pool, cargar_slots,
+                                  asignar_mesa_continuidad)
 from procesamiento.prefiltrado import construir_candidatos
 from procesamiento.validacion import (matriz_elegibilidad,
                                       reporte_cobertura, resumen_cobertura)
@@ -44,7 +45,10 @@ def main():
     staff = cargar_staff(rep)
     skills = cargar_skills(rep)
     personas = construir_pool(staff, skills, rep)
-    slots = cargar_slots(rep)
+    # el dominio de la demanda debe coincidir con el de la oferta (staff)
+    slots = cargar_slots(rep, dominio_oferta=personas.attrs.get("dominio_oferta"))
+    # mesa de continuidad + capacidad real: cruza SDA de la persona con la demanda
+    personas = asignar_mesa_continuidad(personas, slots, rep)
     print("\n[1] CARGA Y NORMALIZACIÓN")
     print(rep.dump())
 

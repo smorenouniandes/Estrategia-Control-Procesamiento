@@ -9,7 +9,8 @@ from dataclasses import dataclass, field
 import pandas as pd
 
 from . import config as C
-from .tiempo import trimestres_2027_de, parse_trimestre, parse_fecha, Q1_2027
+from .tiempo import (trimestres_2027_de, parse_trimestre, parse_fecha,
+                     Q1_2027, Q4_2027)
 
 
 # =========================================================================
@@ -117,40 +118,66 @@ def _libre_por_hoja(df, modo, col) -> pd.Series:
     return tmp.groupby("cod")["val"].min().clip(lower=0.0, upper=1.0)
 
 
-def _sdas_y_release(rep: Reporte) -> tuple[dict, dict]:
-    """(sdas_vigentes_2027 por código, release_date por código).
+def _sdas_vigentes_por_persona(rep: Reporte) -> dict:
+    """SDA que CONTINÚAN en el periodo de asignación (2027), por persona.
 
-    Solo hojas con proyecto + fecha fin aportan (hoy: Staff System).
+    Una SDA está vigente si su intervalo [inicio, fin] del staff se SOLAPA con
+    2027 (Q1–Q4). Se recolecta, por persona, la lista de (sda, dedicación) de sus
+    SDA vigentes, más su release_date. La MESA y la CAPACIDAD final se calculan
+    después cruzando con la demanda (ver asignar_mesa_continuidad), porque:
+      - la mesa de la SDA no está en el staff (columna vacía): sale de la demanda;
+      - una SDA que no aparece en la demanda se ignora por completo [regla b].
+
+    Devuelve dict[cod] = {"sdas_ded": {sda: dedicación}, "release_date": date}.
     """
-    sdas: dict[str, set] = {}
+    por_persona: dict[str, dict] = {}
     release: dict[str, object] = {}
-    for hoja, m in C.STAFF_HOJAS.items():
-        if "proyecto" not in m or "fecha_fin" not in m:
+    for hoja in C.HOJAS_ACTIVAS:
+        m = C.STAFF_HOJAS[hoja]
+        if not all(k in m for k in ("sda", "fecha_fin")):
+            rep.add(f"[continuidad] hoja '{hoja}' sin sda/fecha_fin; omitida.")
             continue
+        tiene_inicio = "Fecha Inicio" in pd.read_excel(
+            C.DATA3_PATH, sheet_name=hoja, header=None, nrows=1).iloc[0].tolist()
         raw = pd.read_excel(C.DATA3_PATH, sheet_name=hoja, header=None)
         hdr = raw.iloc[0].tolist()
         df = raw.iloc[1:].copy(); df.columns = hdr
         df = df[df[m["codigo"]].notna()]
+        _, cap_col = m["capacidad"]
         for _, r in df.iterrows():
             cod = str(r[m["codigo"]]).strip()
+            ini_ord = parse_trimestre(r.get("Fecha Inicio")) if tiene_inicio else None
             fin_ord = parse_trimestre(r.get(m["fecha_fin"]))
             fin_date = parse_fecha(r.get(m["fecha_fin"]), fin_trimestre=True)
-            if fin_date is not None:
-                prev = release.get(cod)
-                if prev is None or fin_date > prev:
-                    release[cod] = fin_date
-            if fin_ord is not None and fin_ord >= Q1_2027:
-                proj = str(r.get(m["proyecto"], ""))
-                mt = re.search(r"(?i)\b(SDATOOL-\d+)\b", proj)
-                if mt:
-                    sdas.setdefault(cod, set()).add(mt.group(1).upper())
-    rep.add(f"Continuidad: {len(sdas)} personas con >=1 SDA vigente 2027.")
-    return ({c: frozenset(s) for c, s in sdas.items()}, release)
+            if fin_date is not None and (release.get(cod) is None
+                                         or fin_date > release[cod]):
+                release[cod] = fin_date
+            mt = re.search(r"(?i)\b(SDATOOL-\d+)\b", str(r.get(m["sda"], "")))
+            sda = mt.group(1).upper() if mt else None
+            if sda is None:
+                continue
+            # vigencia = solapamiento [inicio, fin] ∩ [Q1_2027, Q4_2027]
+            lo = ini_ord if ini_ord is not None else Q1_2027  # sin inicio: conservador
+            hi = fin_ord if fin_ord is not None else Q4_2027   # sin fin: conservador
+            vigente = lo <= Q4_2027 and hi >= Q1_2027
+            if not vigente:
+                continue
+            ded = pd.to_numeric(pd.Series([r.get(cap_col)]),
+                                errors="coerce").fillna(0.0).iloc[0]
+            info = por_persona.setdefault(cod, {"sdas_ded": {}, "release_date": None})
+            # si la SDA se repite, acumula dedicación
+            info["sdas_ded"][sda] = info["sdas_ded"].get(sda, 0.0) + float(ded)
+    for cod in por_persona:
+        por_persona[cod]["release_date"] = release.get(cod)
+    rep.add(f"Continuidad: {len(por_persona)} personas con >=1 SDA vigente en 2027 "
+            f"(solapamiento inicio–fin).")
+    return por_persona
 
 
 def cargar_staff(rep: Reporte) -> pd.DataFrame:
     piezas, peso_dir = [], []
-    for hoja, m in C.STAFF_HOJAS.items():
+    for hoja in C.HOJAS_ACTIVAS:
+        m = C.STAFF_HOJAS[hoja]
         raw = pd.read_excel(C.DATA3_PATH, sheet_name=hoja, header=None)
         hdr = raw.iloc[0].tolist()
         df = raw.iloc[1:].copy(); df.columns = hdr
@@ -158,7 +185,6 @@ def cargar_staff(rep: Reporte) -> pd.DataFrame:
         df["_cod"] = df[m["codigo"]].astype(str).str.strip()
 
         modo, col = m["capacidad"]
-        libre = _libre_por_hoja(df, modo, col)
         val = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
         dom_col = m.get("dominio")
         dom_vals = (df[dom_col].astype(str).str.strip().str.upper().values
@@ -177,7 +203,6 @@ def cargar_staff(rep: Reporte) -> pd.DataFrame:
                                        interno=("interno", "first"),
                                        rol=("rol", "first"),
                                        dominio=("dominio", "first"))
-        attrs["libre"] = libre
         piezas.append(attrs.reset_index())
         peso_dir.append(tmp.groupby(["cod", "direccion"])["peso"].sum().reset_index())
         rep.add(f"[{hoja}] filas={len(df)} personas={df['_cod'].nunique()} "
@@ -185,43 +210,49 @@ def cargar_staff(rep: Reporte) -> pd.DataFrame:
 
     allp = pd.concat(piezas, ignore_index=True)
     pesos = pd.concat(peso_dir, ignore_index=True)
-    libre_final = allp.groupby("cod")["libre"].min()
     pesos_g = pesos.groupby(["cod", "direccion"])["peso"].sum().reset_index()
     idx = pesos_g.groupby("cod")["peso"].idxmax()
     dir_final = pesos_g.loc[idx].set_index("cod")["direccion"]
     attrs_final = allp.drop_duplicates("cod", keep="first").set_index("cod")
 
-    pool = pd.DataFrame({"codigo": libre_final.index})
-    pool["capacidad_libre"] = pool["codigo"].map(libre_final)
+    pool = pd.DataFrame({"codigo": attrs_final.index})
     pool["direccion"] = pool["codigo"].map(dir_final)
     pool["empresa"] = pool["codigo"].map(attrs_final["empresa"])
     pool["rol_staff"] = pool["codigo"].map(attrs_final["rol"])
     tipo = pool["codigo"].map(attrs_final["interno"]).str.lower()
     pool["es_interno"] = tipo == C.STAFF_INTERNO_VALOR
 
-    # --- dominio REAL de la oferta (staff) + validación de coincidencia ---
+    # --- dominio REAL de la OFERTA (staff): debe ser único ---
     pool["dominio"] = pool["codigo"].map(attrs_final["dominio"]).fillna("")
     presentes = sorted(d for d in pool["dominio"].unique() if d)
-    rep.add(f"Dominio(s) reales en el staff: {presentes or ['(vacío)']}.")
-    if presentes and presentes != [C.DOMINIO_ASIGNACION]:
+    rep.add(f"Dominio(s) reales en el staff (oferta): {presentes or ['(vacío)']}.")
+    if len(presentes) > 1:
         raise ValueError(
-            f"El staff trae dominios {presentes} y la corrida está fijada a "
-            f"'{C.DOMINIO_ASIGNACION}'. Este pipeline asigna un único dominio que "
-            f"debe coincidir entre oferta y demanda. Ajusta DOMINIO_ASIGNACION o "
+            f"La OFERTA (staff) trae más de un dominio {presentes}. Este pipeline "
+            f"asigna un único dominio por corrida. Revisa la carga de DATA3 o "
             f"separa la data por dominio.")
+    # el dominio de la corrida lo FIJA el dato de oferta (no la config)
+    dominio_oferta = presentes[0] if presentes else C.DOMINIO_ASIGNACION
+    pool.attrs["dominio_oferta"] = dominio_oferta
     sin_dom = int((pool["dominio"] == "").sum())
     if sin_dom:
         rep.add(f"[dominio] {sin_dom} personas sin dominio en el staff "
                 f"(no coincidirán; se reportarán en el prefiltrado).")
 
-    sdas, release = _sdas_y_release(rep)
+    # --- SDA vigentes por persona (mesa + capacidad se calculan tras los slots) ---
+    vig = _sdas_vigentes_por_persona(rep)
+    # sdas_vigentes_2027 = conjunto de SDA vigentes (todas, antes de cruzar demanda)
     pool["sdas_vigentes_2027"] = pool["codigo"].map(
-        lambda c: sdas.get(c, frozenset()))
-    pool["release_date"] = pool["codigo"].map(lambda c: release.get(c))
-
-    if C.CAPACIDAD_UNIFORME:
-        pool["capacidad_libre"] = 1.0
-        rep.add("[CAPACIDAD_UNIFORME] capacidad real ignorada; todas al 100%.")
+        lambda c: frozenset(vig.get(c, {}).get("sdas_ded", {}).keys()))
+    pool["release_date"] = pool["codigo"].map(
+        lambda c: vig.get(c, {}).get("release_date"))
+    # dedicación por SDA vigente (dict), insumo para capacidad tras cruzar demanda
+    pool["_sdas_ded"] = pool["codigo"].map(
+        lambda c: vig.get(c, {}).get("sdas_ded", {}))
+    # placeholders; se completan en asignar_mesa_continuidad()
+    pool["mesa_continuidad"] = None
+    pool["capacidad_comprometida"] = 0.0
+    pool["capacidad_libre"] = 1.0
 
     rep.add(f"Pool staff Q4: {len(pool)} personas únicas.")
     rep.add(f"Interno/externo: "
@@ -234,6 +265,7 @@ def cargar_staff(rep: Reporte) -> pd.DataFrame:
 # =========================================================================
 def construir_pool(staff: pd.DataFrame, skills: pd.DataFrame,
                    rep: Reporte) -> pd.DataFrame:
+    dominio_oferta = staff.attrs.get("dominio_oferta", C.DOMINIO_ASIGNACION)
     pool = staff.merge(skills, on="codigo", how="left", suffixes=("", "_d1"))
 
     # staff sin perfil en DATA1 -> excluir (no hay skills -> inservible)
@@ -267,13 +299,14 @@ def construir_pool(staff: pd.DataFrame, skills: pd.DataFrame,
 
     rep.add(f"Pool final (staff ⨝ skills, familia LT/DEV/QA): {len(pool)}.")
     rep.add(f"Familias del pool: {pool['familia'].value_counts().to_dict()}.")
+    pool.attrs["dominio_oferta"] = dominio_oferta
     return pool
 
 
 # =========================================================================
 # 1b. Demanda / slots (DATA2)
 # =========================================================================
-def cargar_slots(rep: Reporte) -> pd.DataFrame:
+def cargar_slots(rep: Reporte, dominio_oferta: str | None = None) -> pd.DataFrame:
     raw = pd.read_excel(C.DATA2_PATH, sheet_name="Hoja 1", header=None)
     hdr = raw.iloc[1].tolist()
     d2 = raw.iloc[2:].reset_index(drop=True)
@@ -309,22 +342,43 @@ def cargar_slots(rep: Reporte) -> pd.DataFrame:
                                           base["fecha_fin_orig"])]
     base["familia"] = base["rol_slot"].str.lower().map(C.ROL_SLOT_A_FAMILIA)
 
-    # --- dominio único por corrida ---
-    # Si la demanda trae una columna 'Dominio', se exige un ÚNICO valor y se usa;
-    # si no, se marca todo con DOMINIO_ASIGNACION. No es multidominio.
-    if "Dominio" in d2.columns:
-        doms = (d2["Dominio"].astype("string").str.strip().str.upper()
+    # --- dominio único por corrida, desde el DATO REAL de la demanda ---
+    # Si DATA2 trae columna de dominio, se usa (debe ser un único valor). Si no,
+    # se deriva de la Dirección, y si tampoco, se cae a DOMINIO_ASIGNACION.
+    # Luego se EXIGE que coincida con el dominio de la oferta (staff): si no
+    # coincide, aborta (protege ante fallo humano al cargar la data).
+    col_dom = C.DOMINIO_COL_DEMANDA
+    if col_dom in d2.columns:
+        doms = (d2[col_dom].astype("string").str.strip().str.upper()
                 .dropna().unique().tolist())
         doms = [d for d in doms if d]
         if len(doms) > 1:
             raise ValueError(
-                f"La demanda trae más de un dominio {doms}; este pipeline asigna "
-                f"un solo dominio por corrida. Separa la data o fija DOMINIO_ASIGNACION.")
-        dominio = doms[0] if doms else C.DOMINIO_ASIGNACION
+                f"La DEMANDA trae más de un dominio {doms}; este pipeline asigna "
+                f"un solo dominio por corrida. Separa la data por dominio.")
+        dominio_demanda = doms[0] if doms else None
+        fuente = f"columna '{col_dom}'"
     else:
-        dominio = C.DOMINIO_ASIGNACION
+        dominio_demanda = None
+        fuente = "(sin columna de dominio)"
+
+    if dominio_demanda is None:
+        # sin dato explícito en la demanda: usa el de la oferta si existe, o config
+        dominio_demanda = (dominio_oferta or C.DOMINIO_ASIGNACION)
+        fuente += " -> se toma el de la oferta/config"
+
+    # validación de coincidencia oferta ↔ demanda
+    if dominio_oferta and dominio_demanda and dominio_oferta != dominio_demanda:
+        raise ValueError(
+            f"DISCREPANCIA DE DOMINIO: oferta (staff)='{dominio_oferta}' vs "
+            f"demanda (DATA2)='{dominio_demanda}'. Deben coincidir. Revisa la "
+            f"carga de datos (posible error humano al subir la información).")
+
+    dominio = dominio_demanda
     base["dominio"] = dominio
-    rep.add(f"Dominio de asignación (único): {dominio}.")
+    rep.add(f"Dominio de la demanda: {dominio} [{fuente}].")
+    if dominio_oferta:
+        rep.add(f"[dominio] coincidencia oferta↔demanda OK: '{dominio}'.")
 
     # --- SDA consolidada por grupo Mesa + Foco estratégico (Fábrica) ---
     # Cada fila conserva su SDA individual en 'sda', pero 'sdas_grupo' lleva la
@@ -378,3 +432,85 @@ def cargar_slots(rep: Reporte) -> pd.DataFrame:
     # 'sdas_grupo' (consolidada por Mesa+Foco) viaja en cada plaza desde 'base'
     # y es la base de la continuidad en el prefiltrado.
     return slots
+
+
+# =========================================================================
+# 1c. Mesa de continuidad + capacidad real (cruza SDA de la persona con la demanda)
+# =========================================================================
+def asignar_mesa_continuidad(personas: pd.DataFrame, slots: pd.DataFrame,
+                             rep: Reporte) -> pd.DataFrame:
+    """Determina, por persona, su mesa de continuidad y su capacidad libre.
+
+    La relación SDA->mesa NO está en el staff (columna vacía): se toma de la
+    DEMANDA. Para cada SDA vigente de la persona (de `_sdas_ded`), se busca en qué
+    grupo Mesa+Foco de la demanda aparece esa SDA (`sdas_grupo`).
+
+    Regla (24-nov):
+      1. agrupa las SDA vigentes de la persona por grupo Mesa+Foco de la demanda;
+      2. una SDA que NO está en ninguna mesa de la demanda se IGNORA (ni mesa ni
+         capacidad) [regla b];
+      3. elige la mesa con MÁS SDA de continuidad; empate -> mayor SUMA de dedicación;
+      4. capacidad_comprometida = suma de dedicación de las SDA de esa mesa;
+         capacidad_libre = 1 - comprometida (piso 0);
+      5. mesa_continuidad = ese grupo (el modelo la respeta como asignación fija).
+    Sin SDA de continuidad presente en la demanda -> libre = 1.0, sin mesa.
+    """
+    if C.CAPACIDAD_UNIFORME:
+        personas["capacidad_libre"] = 1.0
+        personas = personas.drop(columns=["_sdas_ded"], errors="ignore")
+        rep.add("[CAPACIDAD_UNIFORME] capacidad real ignorada; todas al 100%.")
+        return personas
+
+    # mapa SDA -> grupo(s) Mesa+Foco de la demanda
+    sda_a_grupos: dict[str, set] = {}
+    if len(slots):
+        for _, s in slots.drop_duplicates("grupo_mesa_foco").iterrows():
+            for sda in _como_set_sdas(s.get("sdas_grupo")):
+                sda_a_grupos.setdefault(sda, set()).add(s["grupo_mesa_foco"])
+
+    mesas, comprometidas, libres = [], [], []
+    n_con = 0
+    for _, p in personas.iterrows():
+        sdas_ded = p.get("_sdas_ded") or {}
+        # agrupa dedicación por grupo de la demanda; SDA no presente -> ignorada
+        por_grupo: dict[str, list] = {}
+        for sda, ded in sdas_ded.items():
+            for g in sda_a_grupos.get(sda, ()):   # vacío si la SDA no está en demanda
+                e = por_grupo.setdefault(g, [set(), 0.0])
+                e[0].add(sda); e[1] += ded
+        if por_grupo:
+            mesa_sel = max(por_grupo.items(),
+                           key=lambda kv: (len(kv[1][0]), kv[1][1]))[0]
+            comp = min(1.0, por_grupo[mesa_sel][1])
+            mesas.append(mesa_sel)
+            comprometidas.append(round(comp, 4))
+            libres.append(round(max(0.0, 1.0 - comp), 4))
+            n_con += 1
+        else:
+            mesas.append(None); comprometidas.append(0.0); libres.append(1.0)
+
+    personas = personas.copy()
+    personas["mesa_continuidad"] = mesas
+    personas["capacidad_comprometida"] = comprometidas
+    personas["capacidad_libre"] = libres
+    personas = personas.drop(columns=["_sdas_ded"], errors="ignore")
+    libre_media = sum(libres) / max(1, len(libres))
+    rep.add(f"[capacidad real] {n_con} personas con continuidad en una mesa de la "
+            f"demanda (mesa fija + capacidad reducida); resto al 100%.")
+    rep.add(f"[capacidad real] capacidad libre media del pool: {libre_media:.2f} FTE.")
+    return personas
+
+
+def _como_set_sdas(v):
+    """Normaliza sdas_grupo (lista/frozenset/str JSON) a set."""
+    if isinstance(v, (set, frozenset)):
+        return set(v)
+    if isinstance(v, (list, tuple)):
+        return set(v)
+    if isinstance(v, str) and v.strip():
+        import json
+        try:
+            return set(json.loads(v))
+        except Exception:
+            return set()
+    return set()

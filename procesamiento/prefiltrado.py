@@ -165,11 +165,18 @@ def score(persona_row, slot_row) -> dict:
     dom = int(dominio_afin(persona_row, slot_row))
     sen_estado = seniority_match(persona_row["seniority"], slot_row["seniority_req"])
 
+    # regla 4 (Opción 1): el mínimo deseable es SKILLS_PREFERIDAS (=2). Quien cubre
+    # ese mínimo NO se penaliza; quien cubre menos (p.ej. 1) sí. El fallback a 1
+    # skill lo resuelve el modelo prefiriendo los de >=2 y cayendo a 1 solo si no
+    # hay opción. La excepción QA sin skills obligatorias se trata aparte.
+    cumple_pref_skills = int(len(oblig) == 0 or n_cubiertas >= C.SKILLS_PREFERIDAS)
+
     comp = {
         "continuidad": cont,
         "dominio": dom,
         "n_skills_cubiertas": n_cubiertas,
         "n_obligatorias": len(oblig),
+        "cumple_pref_skills": cumple_pref_skills,   # 1 si cubre >=2 (sin castigo)
         "seniority_match": sen_estado,
         "sustitucion_int_ext": int(es_sustitucion(persona_row, slot_row)),
     }
@@ -178,11 +185,15 @@ def score(persona_row, slot_row) -> dict:
         fs = (n_cubiertas / (len(oblig) * 1.0)) if oblig else 0.5
         fsen = _fit_seniority(persona_row["seniority"], slot_row["seniority_req"])
         base = C.W_FIT_SKILLS * fs + C.W_FIT_SENIORITY * fsen
-        comp["score"] = round(base + (C.BONUS_CONTINUIDAD if cont else 0.0), 4)
-    else:  # lexicográfico: continuidad > dominio > skills > seniority
+        # castigo si no alcanza el mínimo preferido de skills (regla 4)
+        castigo = 0.0 if cumple_pref_skills else C.PENALIZACION_SKILLS_PARCIAL
+        comp["score"] = round(base + (C.BONUS_CONTINUIDAD if cont else 0.0) - castigo, 4)
+    else:  # lexicográfico: continuidad > dominio > cumple_pref_skills > nº skills > seniority
         rango_sen = {"coincide": 3, "por_encima": 2, "por_debajo": 1, "sin_dato": 0}
-        # peso posicional con bases amplias para no mezclar niveles
-        comp["score"] = (cont * 1_000_000 + dom * 10_000
+        # 'cumple_pref_skills' pesa por encima del conteo lineal: así 2+ skills
+        # siempre gana a 1 skill (castigo de la regla 4), sin mezclar niveles.
+        comp["score"] = (cont * 10_000_000 + dom * 1_000_000
+                         + cumple_pref_skills * 100_000
                          + n_cubiertas * 100 + rango_sen[sen_estado])
     return comp
 

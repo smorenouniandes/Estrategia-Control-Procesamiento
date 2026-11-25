@@ -52,13 +52,16 @@ DATA1_PATH, DATA2_PATH, DATA3_PATH = rutas_insumos()
 # PARÁMETROS [A CONFIRMAR] — línea base propuesta. Ver §7 del proceso.
 # =========================================================================
 SENIORITY_DURA = True            # (1) seniority como filtro duro, máx. 1 nivel
-SKILLS_MIN_OBLIGATORIAS = 1      # (2) nº mínimo de skills obligatorias registradas
+SKILLS_MIN_OBLIGATORIAS = 1      # (2) mínimo DURO de skills para ser elegible (≥1)
+SKILLS_PREFERIDAS = 2            #     preferencia del score: ≥ este nº no se penaliza;
+                                 #     con menos (1) se castiga el peso (regla 4, Opción 1)
 MODO_SCORE = "lexicografico"     # (3) "lexicografico" | "ponderado"
-CAPACIDAD_UNIFORME = True        # (4) True = ignora capacidad real, todos al 100%
+CAPACIDAD_UNIFORME = False       # (4) False = capacidad real por continuidad de SDA
 SUSTITUCION_INT_EXT = True       # (5) permite tipo opuesto salvo LT (se marca)
-# Un ÚNICO dominio por corrida, configurable (no fijo a ENG). Si se sube data de
-# otro dominio, basta cambiar este valor. El pipeline valida que la demanda traiga
-# un solo dominio y falla si detecta más de uno.
+# Un ÚNICO dominio por corrida (objetivo futuro: multidominio). El dominio se
+# toma del DATO REAL de oferta (staff) y demanda (DATA2); deben coincidir en un
+# único valor. DOMINIO_ASIGNACION es solo el valor ESPERADO: si la data real no
+# coincide con él, el pipeline aborta (protege ante fallo humano de carga).
 DOMINIO_ASIGNACION = "ENG"
 QA_SIN_SKILLS_OK = True          # (6) QA puede no declarar skills obligatorias
 # =========================================================================
@@ -118,8 +121,13 @@ ROL_PERSONA_A_FAMILIA = [
 ]
 ROL_PERSONA_BASURA = ("na ", "na", "cod eliminado")
 
-# --- staff Q4 (DATA3): 3 hojas -> esquema común --------------------------
+# --- staff Q4 (DATA3) -> esquema común -----------------------------------
+# HOJAS_ACTIVAS define qué hojas del Excel se procesan. Hoy el staff es solo
+# 'Staff System'. Las otras quedan definidas en STAFF_HOJAS por si vuelven a
+# usarse: basta agregarlas a esta lista (Opción A, configurable).
 STAFF_INTERNO_VALOR = "interno"
+HOJAS_ACTIVAS = ["Staff System"]
+
 STAFF_HOJAS = {
     "Staff System": {
         "codigo": "Código", "nombre": "Nombre", "direccion": "Dirección",
@@ -127,28 +135,35 @@ STAFF_HOJAS = {
         "dominio": "Dominio",
         "capacidad": ("compromiso", "% Dedicación"),
         "proyecto": "Proyecto", "fecha_fin": "Fecha Fin Actual",
+        # columnas para continuidad y capacidad real por SDA
+        "sda": "SDATOOL - Proyecto", "mesa": "Mesa fábrica 2026",
     },
     "Staff Data": {
         "codigo": "Codigo", "nombre": "Nombre", "direccion": "Dirección",
         "empresa": "Empresa", "interno": "Interno/ Externo", "rol": "Rol",
         "dominio": "Dominio",
         "capacidad": ("disponible", "% Total x usuario"),
+        "sda": "SDA", "mesa": "Mesa Asignada",
     },
     "Staff Arquitectura": {
         "codigo": "Código", "nombre": "Nombre", "direccion": "Dirección",
         "empresa": "Empresa", "interno": "Interno", "rol": "Rol",
         "dominio": "Dominio",
         "capacidad": ("compromiso", "% Dedicación"),
+        "sda": "SDATOOL", "mesa": "Mesa Fábrica",
     },
 }
 
 # --- dominio -------------------------------------------------------------
-# UN solo dominio por corrida. El dominio de la OFERTA (personas) se lee del dato
-# REAL del staff (DATA3, columna 'Dominio'). El dominio de la DEMANDA (slots) es
-# DOMINIO_ASIGNACION (DATA2 no trae dominio, solo Dirección). El pipeline EXIGE
-# que el dominio del staff sea único y COINCIDA con DOMINIO_ASIGNACION; si no,
-# aborta en vez de pasar en silencio. El filtro de dominio en el prefiltrado
-# descarta (y reporta) a quien no coincida. No es multidominio.
+# UN solo dominio por corrida (multidominio es objetivo futuro). El dominio se
+# lee del DATO REAL en ambos lados:
+#   - OFERTA (personas): columna 'Dominio' del staff (DATA3).
+#   - DEMANDA (slots):   columna de dominio de DATA2 si existe; si no, Dirección
+#                        mapeada, o DOMINIO_ASIGNACION como último recurso.
+# El pipeline exige que oferta y demanda tengan UN único dominio y que COINCIDAN.
+# Si no coinciden (p. ej. fallo humano al cargar), aborta con mensaje claro.
+# Columna candidata de dominio en la demanda (se usa si está presente):
+DOMINIO_COL_DEMANDA = "Dominio"
 
 # --- tiempo --------------------------------------------------------------
 TRIMESTRES_2027 = ["1Q 2027", "2Q 2027", "3Q 2027", "4Q 2027"]
@@ -165,3 +180,5 @@ FIT_SENIORITY_POR_ENCIMA = 0.75
 FIT_SENIORITY_PASO_DEBAJO = 0.25
 FIT_SENIORITY_SIN_DATO = 0.5
 BONUS_CONTINUIDAD = 0.15
+# castigo (modo ponderado) a quien no alcanza SKILLS_PREFERIDAS (regla 4)
+PENALIZACION_SKILLS_PARCIAL = 0.30
