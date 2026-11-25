@@ -17,7 +17,7 @@ por las tres capas de procesamiento que definen la **elegibilidad**, hasta el
 golden set que ambos modelos consumen. El procesamiento responde **quién puede ir
 en cada plaza**; los modelos responden **a quién se asigna**.
 
-![Arquitectura funcional](docs/arquitectura_funcional.png)
+![Arquitectura funcional](arquitectura_funcional.png)
 
 **Lectura del diagrama:**
 1. **Bases de entrada** — DATA1 (skills por persona), DATA2 (plazas por proyecto),
@@ -41,7 +41,7 @@ Describe la implementación: los Excel de entrada, el paquete Python con sus
 módulos y funciones, los artefactos del golden set en sus formatos, y cómo los
 consumidores los cargan.
 
-![Arquitectura técnica](docs/arquitectura_tecnica.png)
+![Arquitectura técnica](arquitectura_tecnica.png)
 
 **Lectura del diagrama:**
 - **Entradas** — tres `.xlsx` en `Data/`. Solo `carga.py` los lee.
