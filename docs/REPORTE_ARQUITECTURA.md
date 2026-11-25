@@ -44,7 +44,7 @@ consumidores los cargan.
 ![Arquitectura técnica](docs/arquitectura_tecnica.png)
 
 **Lectura del diagrama:**
-- **Entradas** — tres `.xlsx` en la raíz del workspace. Solo `carga.py` los lee.
+- **Entradas** — tres `.xlsx` en `Data/`. Solo `carga.py` los lee.
 - **Paquete `procesamiento/`** (pandas):
   - `config.py` — flags, catálogo de roles, mapeos.
   - `carga.py` — `cargar_staff`, `cargar_skills`, `construir_pool`, `cargar_slots`.

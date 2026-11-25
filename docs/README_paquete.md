@@ -44,7 +44,7 @@ golden set. Por eso basta versionar el código.
 
 ```bash
 pip install -r requirements.txt
-python -m procesamiento.run          # desde la raíz del workspace
+python -m procesamiento.run          # desde la raíz del repo
 # o
 cd procesamiento && python run.py
 ```

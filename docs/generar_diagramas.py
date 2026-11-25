@@ -124,7 +124,7 @@ def diagrama_tecnico():
                  fontsize=14, fontweight="bold", pad=14)
 
     # --- entradas (.xlsx) ---
-    _band(ax, 0.02, 0.82, 0.96, 0.15, "Entradas (.xlsx, raíz del workspace)", C_SRC_E)
+    _band(ax, 0.02, 0.82, 0.96, 0.15, "Entradas (.xlsx en Data/)", C_SRC_E)
     for i, (txt) in enumerate(["DATA1_personas.xlsx\nHoja 1 · 160 cols",
                                "DATA2_demanda.xlsx\nHoja 1",
                                "DATA3_staffq4.xlsx\n3 hojas"]):

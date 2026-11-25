@@ -51,8 +51,9 @@ cualquier golden set es rastreable a sus insumos y a su configuración.
 
 ## 2. Bases de entrada y su esquema
 
-Las tres bases viven en la raíz del workspace. Son Excel crudos de negocio:
-cabeceras en la segunda fila, celdas combinadas, columnas sucias y mezcla de tipos.
+Las tres bases viven en la carpeta `Data/` del repo (se buscan por patrón de
+nombre `DATA1*`/`DATA2*`/`DATA3*`). Son Excel crudos de negocio: cabeceras en la
+segunda fila, celdas combinadas, columnas sucias y mezcla de tipos.
 
 ### 2.1 `DATA1_personas.xlsx` — hoja `Hoja 1`
 Catálogo de ~1.680 perfiles con su matriz de skills. **Tabla de consulta por
@@ -413,11 +414,13 @@ elimina del código; solo se conmuta su valor.
 ## 10. Ejecución y reproducibilidad
 
 ```bash
-pip install -r requirements.txt   # pandas, openpyxl, pyarrow
-python -m procesamiento.run                     # desde la raíz del workspace
+pip install -r requirements.txt   # pandas, openpyxl
+python -m procesamiento.run                     # desde la raíz del repo
 ```
 
-- Lee los tres Excel de la raíz y escribe `golden_set/`.
+- Lee los tres Excel de `Data/` (por patrón de nombre `DATA1*`/`DATA2*`/`DATA3*`;
+  si falta alguno, aborta con un mensaje claro) y escribe `golden_set/` en la raíz
+  del repo.
 - El `resumen.json` sella entrada (conteos) y configuración (parámetros), de modo
   que un golden set es reproducible: mismos Excel + mismos flags ⇒ mismo resultado.
 - La ejecución imprime las tres capas y los conteos, y deja la traza completa en
