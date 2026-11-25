@@ -77,6 +77,8 @@ exactamente los mismos candidatos.
 - **Asignación** (composición/optimización) → NO están aquí; son del motor.
 - **Fuente de negocio** (las 10 reglas originales) → ver `DECISIONES.md`, que mapea
   cada decisión de diseño a su regla.
+- **Inventario completo y clasificación filtrado/asignación de TODAS las reglas**
+  (negocio + diseño + CP-SAT + MILP) → `docs/REGLAS_FILTRADO_Y_ASIGNACION.md`.
 
 ## 7. Parámetros actuales (`procesamiento/config.py`)
 

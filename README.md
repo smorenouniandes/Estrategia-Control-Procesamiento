@@ -62,5 +62,6 @@ insumo principal). Los archivos de `golden_set/reportes/` son auditoría.
 
 - **Contexto para retomar el proyecto: `CONTEXTO_PROYECTO.md`** (empieza por aquí).
 - Decisiones de diseño y flags: `DECISIONES.md`.
+- Reglas de filtrado vs. asignación (inventario completo): `docs/REGLAS_FILTRADO_Y_ASIGNACION.md`.
 - Flujo técnico detallado: `docs/DOCUMENTACION_E2E.md`.
 - Arquitectura (diagramas): `docs/REPORTE_ARQUITECTURA.md`.
